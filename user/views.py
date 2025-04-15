@@ -2,16 +2,49 @@ from django.db.models import Q
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from user.serializers import UserSerializer
 from user.models import User
 from django.contrib.auth.hashers import make_password
+from rest_framework.decorators import action
 
 # Create your views here.
+class AuthViewSet(viewsets.ModelViewSet):
+    @action(detail=False, methods=['post'], url_path='login')
+    def login(self, request):
+        user = User.objects.filter(username=request.data['username']).first()
+        if user is None:
+            return Response({'error': 'User not found'}, status=404)
+        if not user.check_password(request.data['password']):
+            return Response({'error': 'Password is incorrect'}, status=400)
+        if not user.is_active:
+            return Response({'error': 'User is inactive'}, status=400)
+
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        access_token['id'] = user.id
+        access_token['first_name'] = user.first_name
+        access_token['last_name'] = user.last_name
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(access_token),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_staff': user.is_staff,
+            }
+        }, status=200)
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-    def create(self, request, *args, **kwargs):
+    @action(detail=False, methods=['post'], url_path='register')
+    def register(self, request, *args, **kwargs):
         user = User.objects.filter(
             Q(username=request.data['username']) | Q(email=request.data['email'])
         )

@@ -16,22 +16,32 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from user.views import UserViewSet
+from user.views import UserViewSet, AuthViewSet
 from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
 from rest_framework import routers
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 router = routers.DefaultRouter()
 router.register('user', UserViewSet, basename='user')
 router.register('product', ProductViewSet, basename='product')
 router.register('cart', CartViewSet, basename='cart')
+router.register('auth', AuthViewSet, basename='auth')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    #api user, product, cart using viewset
     path('api/', include(router.urls)),
+
+    #api product, cart using api_view
     path('api/cart/total_price/<int:id>/', get_total_price, name='get_total_price'),
     path('api/FBV/product/create/', product_create, name='product_create'),
     path('api/FBV/product/update/', product_update, name='product_update'),
     path('api/FBV/product/delete/<int:id>/', product_delete, name='product_delete'),
     path('api/product/get_all', product_get_all, name='product_get_all'),
-    path('api/product/get_by_id/<int:id>/', product_get_by_id, name='product_get_by_id')
+    path('api/product/get_by_id/<int:id>/', product_get_by_id, name='product_get_by_id'),
+
+    #api authen
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
 ]

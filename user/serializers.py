@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainSerializer, TokenObtainPairSerializer
+
 from user.models import User
 
 class UserSerializer(serializers.ModelSerializer):
