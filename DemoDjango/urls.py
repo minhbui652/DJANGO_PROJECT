@@ -15,11 +15,27 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import AllowAny
+
 from user.views import UserViewSet, AuthViewSet
 from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
-from rest_framework import routers
+from rest_framework import routers, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Demo API",
+        default_version='v1',
+        description="test swagger",
+    ),
+    public=True,
+    permission_classes=[AllowAny],
+
+)
 
 router = routers.DefaultRouter()
 router.register('user', UserViewSet, basename='user')
@@ -28,6 +44,11 @@ router.register('cart', CartViewSet, basename='cart')
 router.register('auth', AuthViewSet, basename='auth')
 
 urlpatterns = [
+    #swagger
+    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    re_path('^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+
     path('admin/', admin.site.urls),
     #api user, product, cart using viewset
     path('api/', include(router.urls)),
