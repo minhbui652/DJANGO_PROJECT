@@ -1,13 +1,73 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.decorators import api_view
-
 from .models import Product, Cart
 from user.models import User
 from .serializer import ProductSerializer, CartSerializer
 from rest_framework.response import Response
+from django.core.paginator import Paginator
 
 # Create your views here.
+@api_view(['POST'])
+def product_create(request):
+    if int(request.data['stock']) < 0:
+        return Response({'error': 'Stock cannot be negative'}, status=400)
+    if float(request.data['price']) <= 0:
+        return Response({'error': 'Price cannot be negative'}, status=400)
+    serialize = ProductSerializer(data=request.data, context=({'request': request}))
+    if serialize.is_valid():
+        serialize.save()
+        return Response(serialize.data, status=201)
+    return Response(serialize.errors, status=400)
+
+@api_view(['PUT'])
+def product_update(request):
+    product = Product.objects.filter(id=request.data['id']).first()
+    if product is None:
+        return Response({'error': 'Product does not exist'}, status=400)
+    if int(request.data['stock']) < 0:
+        return Response({'error': 'Stock cannot be negative'}, status=400)
+    if float(request.data['price']) <= 0:
+        return Response({'error': 'Price cannot be negative'}, status=400)
+    serialize = ProductSerializer(product, data=request.data, context=({'request': request}))
+    if serialize.is_valid():
+        serialize.save()
+        return Response(serialize.data, status=200)
+    return Response(serialize.errors, status=400)
+
+@api_view(['DELETE'])
+def product_delete(request, id):
+    product = Product.objects.filter(id=id).first()
+    if product is None:
+        return Response({'error': 'Product does not exist'}, status=400)
+    product.delete()
+    return Response({'message': 'Product deleted successfully'}, status=200)
+
+@api_view(['GET'])
+def product_get_by_id(request, id):
+    product = Product.objects.filter(id=id).first()
+    if product is None:
+        return Response({'error': 'Product does not exist'}, status=400)
+    serialize = ProductSerializer(product)
+    return Response(serialize.data, status=200)
+
+@api_view(['GET'])
+def product_get_all(request):
+    products = Product.objects.all()
+    print(request.data)
+    page_size = int(request.data['page_size']) if 'page_size' in request.data else 10
+    page_number = int(request.data['page_number']) if 'page_number' in request.data else 1
+    paginator = Paginator(products, page_size)
+    result = paginator.get_page(page_number)
+    serialize = ProductSerializer(result, many=True, context=({'request': request}))
+    response = {
+        'page': page_number,
+        'page_size': page_size,
+        'result': serialize.data,
+    }
+    return Response(response, status=200)
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer

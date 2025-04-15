@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from user.views import UserViewSet
-from product.views import ProductViewSet, CartViewSet, get_total_price
+from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
 from rest_framework import routers
 
 router = routers.DefaultRouter()
@@ -29,4 +29,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api/cart/total_price/<int:id>/', get_total_price, name='get_total_price'),
+    path('api/FBV/product/create/', product_create, name='product_create'),
+    path('api/FBV/product/update/', product_update, name='product_update'),
+    path('api/FBV/product/delete/<int:id>/', product_delete, name='product_delete'),
+    path('api/product/get_all', product_get_all, name='product_get_all'),
+    path('api/product/get_by_id/<int:id>/', product_get_by_id, name='product_get_by_id')
 ]
