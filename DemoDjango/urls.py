@@ -17,12 +17,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from user.views import UserViewSet
+from product.views import ProductViewSet, CartViewSet, get_total_price
 from rest_framework import routers
 
 router = routers.DefaultRouter()
 router.register('user', UserViewSet, basename='user')
+router.register('product', ProductViewSet, basename='product')
+router.register('cart', CartViewSet, basename='cart')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls))
+    path('api/', include(router.urls)),
+    path('api/cart/total_price/<int:id>/', get_total_price, name='get_total_price'),
 ]
