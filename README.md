@@ -6,3 +6,4 @@
 ## - Tạo api CRUD bằng api_view cho Product
 ## - Tạo api đăng ký có mã hóa mật khẩu bằng django.contrib.auth.hashers
 ## - Tạo api đăng nhập có cấp token bằng rest_framework_simplejwt
+## - Sử dụng drf_yasg để tạo swagger cho api
