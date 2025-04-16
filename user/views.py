@@ -3,13 +3,15 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from user.serializers import UserSerializer
+from user.serializers import UserSerializer, LoginDto
 from user.models import User
 from django.contrib.auth.hashers import make_password
 from rest_framework.decorators import action
+from drf_yasg.utils import swagger_auto_schema
 
 # Create your views here.
 class AuthViewSet(viewsets.ModelViewSet):
+    @swagger_auto_schema(method='post', request_body=LoginDto)
     @action(detail=False, methods=['post'], url_path='login')
     def login(self, request):
         user = User.objects.filter(username=request.data['username']).first()

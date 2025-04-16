@@ -34,7 +34,7 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[AllowAny],
-
+    authentication_classes=[]
 )
 
 router = routers.DefaultRouter()
@@ -58,8 +58,8 @@ urlpatterns = [
     path('api/FBV/product/create/', product_create, name='product_create'),
     path('api/FBV/product/update/', product_update, name='product_update'),
     path('api/FBV/product/delete/<int:id>/', product_delete, name='product_delete'),
-    path('api/product/get_all', product_get_all, name='product_get_all'),
-    path('api/product/get_by_id/<int:id>/', product_get_by_id, name='product_get_by_id'),
+    path('api/FBV/product/get_all', product_get_all, name='product_get_all'),
+    path('api/FBV/product/get_by_id/<int:id>/', product_get_by_id, name='product_get_by_id'),
 
     #api authen
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

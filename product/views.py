@@ -2,14 +2,16 @@ from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-
 from .models import Product, Cart
 from user.models import User
-from .serializer import ProductSerializer, CartSerializer
+from .serializer import ProductSerializer, CartSerializer, ProductCreateDto, ProductUpdateDto
 from rest_framework.response import Response
 from django.core.paginator import Paginator
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # Create your views here.
+@swagger_auto_schema(method='post', request_body=ProductCreateDto)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def product_create(request):
@@ -17,12 +19,14 @@ def product_create(request):
         return Response({'error': 'Stock cannot be negative'}, status=400)
     if float(request.data['price']) <= 0:
         return Response({'error': 'Price cannot be negative'}, status=400)
-    serialize = ProductSerializer(data=request.data, context=({'request': request}))
+    # serialize = ProductSerializer(data=request.data, context=({'request': request}))
+    serialize = ProductCreateDto(data=request.data, context=({'request': request}))
     if serialize.is_valid():
         serialize.save()
         return Response(serialize.data, status=201)
     return Response(serialize.errors, status=400)
 
+@swagger_auto_schema(method='put', request_body=ProductUpdateDto)
 @api_view(['PUT'])
 def product_update(request):
     product = Product.objects.filter(id=request.data['id']).first()
@@ -32,7 +36,7 @@ def product_update(request):
         return Response({'error': 'Stock cannot be negative'}, status=400)
     if float(request.data['price']) <= 0:
         return Response({'error': 'Price cannot be negative'}, status=400)
-    serialize = ProductSerializer(product, data=request.data, context=({'request': request}))
+    serialize = ProductUpdateDto(product, data=request.data, context=({'request': request}))
     if serialize.is_valid():
         serialize.save()
         return Response(serialize.data, status=200)
@@ -54,12 +58,15 @@ def product_get_by_id(request, id):
     serialize = ProductSerializer(product)
     return Response(serialize.data, status=200)
 
+@swagger_auto_schema(method='get', manual_parameters=[
+    openapi.Parameter('page_size', openapi.IN_QUERY, description="Page size", type=openapi.TYPE_INTEGER),
+    openapi.Parameter('page_number', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER)
+])
 @api_view(['GET'])
 def product_get_all(request):
     products = Product.objects.all()
-    print(request.data)
-    page_size = int(request.data['page_size']) if 'page_size' in request.data else 10
-    page_number = int(request.data['page_number']) if 'page_number' in request.data else 1
+    page_size = request.GET.get('page_size', 1)
+    page_number = request.GET.get('page_number', 10)
     paginator = Paginator(products, page_size)
     result = paginator.get_page(page_number)
     serialize = ProductSerializer(result, many=True, context=({'request': request}))
