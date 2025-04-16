@@ -6,13 +6,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from user.serializers import UserSerializer, LoginDto
 from user.models import User
 from django.contrib.auth.hashers import make_password
-from rest_framework.decorators import action
+from rest_framework.decorators import action, permission_classes
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 # Create your views here.
 class AuthViewSet(viewsets.ModelViewSet):
-    @swagger_auto_schema(method='post', request_body=LoginDto)
-    @action(detail=False, methods=['post'], url_path='login')
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(method='post', request_body=LoginDto, permission_classes=[AllowAny])
+    @action(detail=False, methods=['post'], url_path='login', permission_classes=[AllowAny])
     def login(self, request):
         user = User.objects.filter(username=request.data['username']).first()
         if user is None:
@@ -44,8 +47,9 @@ class AuthViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['post'], url_path='register')
+    @action(detail=False, methods=['post'], url_path='register', permission_classes=[AllowAny])
     def register(self, request, *args, **kwargs):
         user = User.objects.filter(
             Q(username=request.data['username']) | Q(email=request.data['email'])

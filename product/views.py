@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Product, Cart
 from user.models import User
 from .serializer import ProductSerializer, CartSerializer, ProductCreateDto, ProductUpdateDto
@@ -13,7 +13,6 @@ from drf_yasg import openapi
 # Create your views here.
 @swagger_auto_schema(method='post', request_body=ProductCreateDto)
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def product_create(request):
     if int(request.data['stock']) < 0:
         return Response({'error': 'Stock cannot be negative'}, status=400)
@@ -51,6 +50,7 @@ def product_delete(request, id):
     return Response({'message': 'Product deleted successfully'}, status=200)
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def product_get_by_id(request, id):
     product = Product.objects.filter(id=id).first()
     if product is None:
@@ -63,12 +63,13 @@ def product_get_by_id(request, id):
     openapi.Parameter('page_number', openapi.IN_QUERY, description="Page number", type=openapi.TYPE_INTEGER)
 ])
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def product_get_all(request):
     products = Product.objects.all()
-    page_size = request.GET.get('page_size', 1)
-    page_number = request.GET.get('page_number', 10)
+    page_size = int(request.GET.get('page_size', 10))
+    page_number = int(request.GET.get('page_number', 1))
     paginator = Paginator(products, page_size)
-    result = paginator.get_page(page_number)
+    result = paginator.page(page_number) if paginator.num_pages >= page_number else []
     serialize = ProductSerializer(result, many=True, context=({'request': request}))
     response = {
         'page': page_number,
@@ -76,7 +77,6 @@ def product_get_all(request):
         'result': serialize.data,
     }
     return Response(response, status=200)
-
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
