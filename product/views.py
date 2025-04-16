@@ -129,7 +129,7 @@ class CartViewSet(viewsets.ModelViewSet):
         return Response(serialize.errors, status=400)
 
     def update(self, request, *args, **kwargs):
-        if not Cart.objects.fiter(id=request.data['id']).exists():
+        if not Cart.objects.filter(id=kwargs.get('pk')).exists():
             return Response({'error': 'Cart does not exist'}, status=400)
         if not User.objects.filter(id=request.data['user']):
             return Response({'error': 'User does not exist'}, status=400)
@@ -140,7 +140,8 @@ class CartViewSet(viewsets.ModelViewSet):
         elif int(request.data['quantity']) > Product.objects.get(id=request.data['product']).stock:
             return Response({'error': 'Quantity cannot be greater than stock'}, status=400)
 
-        serialize = CartSerializer(data=request.data, context={'request': request})
+        cart = Cart.objects.get(id=kwargs.get('pk'))
+        serialize = CartSerializer(cart, data=request.data, partial=True)
         if serialize.is_valid():
             serialize.save()
             return Response(serialize.data, status=201)
