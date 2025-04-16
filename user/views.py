@@ -79,8 +79,11 @@ class UserViewSet(viewsets.ModelViewSet):
         )
         return Response(result, status=200)
 
+    def create(self, request, *args, **kwargs):
+        return Response({'error': 'Method not allowed'}, status=405)
+
     def update(self, request, *args, **kwargs):
-        user = User.objects.get(id=request.data['id'])
+        user = User.objects.get(id=kwargs['pk'])
         if user is None:
             return Response({'error': 'User not found'}, status=404)
         if User.objects.filter(email=request.data['email']).exists() and user.email != request.data['email']:
