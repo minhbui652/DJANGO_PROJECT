@@ -93,16 +93,17 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response(serialize.data, status=201)
         return Response(serialize.errors, status=400)
 
-    def update(self, request, pk):
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
         if int(request.data['stock']) < 0:
             return Response({'error': 'Stock cannot be negative'}, status=400)
         if float(request.data['price']) <= 0:
             return Response({'error': 'Price cannot be negative'}, status=400)
 
-        product = Product.objects.filter(id=pk).first()
+        product = Product.objects.filter(id=kwargs.get('pk')).first()
         if product is None:
             return Response({'error': 'Product does not exist'}, status=400)
-        serialize = ProductSerializer(product, data=request.data, partial=True)
+        serialize = ProductSerializer(product, data=request.data, partial=partial)
         if serialize.is_valid():
             serialize.save()
             return Response(serialize.data, status=200)
