@@ -7,6 +7,8 @@ from django.core.paginator import Paginator
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from user.models import User
+from user.serializers import AddPermissionDto, DeletePermissionDto
+
 
 @swagger_auto_schema(method='get', manual_parameters=[
     openapi.Parameter('page_size', openapi.IN_QUERY, description="Number of items per page", type=openapi.TYPE_INTEGER),
@@ -30,7 +32,6 @@ def view_permissions(request):
                     'id': permission.id,
                     'name': permission.name,
                     'codename': permission.codename,
-                    'content_type': permission.content_type.all_label,
                 } for permission in permission_page
             ],
         }
@@ -55,5 +56,41 @@ def view_permissions_by_id(request, id):
             } for permission in permissions
         ]
         return Response(result, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+@swagger_auto_schema(methods=['post', 'put'], request_body=AddPermissionDto)
+@api_view(['POST', 'PUT'])
+@permission_classes([IsAuthenticated])
+@permission_required(['auth.add_permission'], raise_exception=True)
+def add_permission(request):
+    try:
+        user = User.objects.get(id=request.data['id'])
+
+        for permission_id in request.data['permission_ids']:
+            permission = Permission.objects.get(id=permission_id)
+            if permission in request.user.user_permissions.all():
+                pass
+            else:
+                user.user_permissions.add(permission)
+                user.save()
+
+        return Response({'message': 'Permission added successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+@swagger_auto_schema(method='delete', request_body=DeletePermissionDto)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@permission_required(['auth.delete_permission'], raise_exception=True)
+def delete_permission(request):
+    try:
+        user = User.objects.get(id=request.data['id'])
+        for permission_id in request.data['permission_ids']:
+            permission = Permission.objects.get(id=permission_id)
+            if permission in user.user_permissions.all():
+                user.user_permissions.remove(permission)
+                user.save()
+        return Response({'message': 'Permission deleted successfully'}, status=200)
     except Exception as e:
         return Response({'error': str(e)}, status=400)
