@@ -20,6 +20,7 @@ from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from user.views import UserViewSet, AuthViewSet
 from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
+from user.view_permissions import view_permissions, view_permissions_by_id
 from rest_framework import routers, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_yasg import openapi
@@ -64,4 +65,7 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
+    #api permission
+    path('api/permission/view_permissions/', view_permissions, name='view_permissions'),
+    path('api/permission/view_permissions/<int:id>/', view_permissions_by_id, name='view_permissions_by_id')
 ]
