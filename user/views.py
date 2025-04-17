@@ -79,6 +79,7 @@ class UserViewSet(viewsets.ModelViewSet):
         )
         return Response(result, status=200)
 
+    #trùng register()
     def create(self, request, *args, **kwargs):
         return Response({'error': 'Method not allowed'}, status=405)
 

@@ -18,7 +18,6 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
-
 from user.views import UserViewSet, AuthViewSet
 from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
 from rest_framework import routers, permissions
