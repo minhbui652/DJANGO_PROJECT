@@ -20,7 +20,8 @@ from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from user.views import UserViewSet, AuthViewSet
 from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
-from user.view_permissions import view_permissions, view_permissions_by_id, add_permission, delete_permission
+from user.view_permissions import (view_permissions, view_permissions_by_id, add_permission, delete_permission,
+                                   view_group, view_group_by_user_id, add_group, update_group, delete_group)
 from rest_framework import routers, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_yasg import openapi
@@ -69,5 +70,12 @@ urlpatterns = [
     path('api/permission/view_permissions/', view_permissions, name='view_permissions'),
     path('api/permission/view_permissions/<int:id>/', view_permissions_by_id, name='view_permissions_by_id'),
     path('api/permission/add_permission/', add_permission, name='add_permission'),
-    path('api/permission/delete_permission/', delete_permission, name='delete_permission')
+    path('api/permission/delete_permission/', delete_permission, name='delete_permission'),
+
+    #api group
+    path('api/group/view_groups/', view_group, name='view_groups'),
+    path('api/group/view_groups/<int:id>/', view_group_by_user_id, name='view_groups_by_user_id'),
+    path('api/group/add_group/', add_group, name='add_group'),
+    path('api/group/update_group/', update_group, name='update_group'),
+    path('api/group/delete_group/<int:id>/', delete_group, name='delete_group'),
 ]

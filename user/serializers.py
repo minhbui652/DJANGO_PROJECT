@@ -34,3 +34,20 @@ class DeletePermissionDto(serializers.ModelSerializer):
 
     id = serializers.IntegerField()
     permission_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+
+class AddGroupDto(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['name', 'permission_ids']
+
+    name = serializers.CharField(max_length=150)
+    permission_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+
+class UpdateGroupDto(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'permission_ids']
+
+    id = serializers.IntegerField()
+    name = serializers.CharField(max_length=150)
+    permission_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
