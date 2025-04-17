@@ -1,7 +1,8 @@
+from django.contrib.auth.decorators import permission_required
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, DjangoModelPermissions
 from .models import Product, Cart
 from user.models import User
 from .serializer import ProductSerializer, CartSerializer, ProductCreateDto, ProductUpdateDto
@@ -13,6 +14,8 @@ from drf_yasg import openapi
 # Create your views here.
 @swagger_auto_schema(method='post', request_body=ProductCreateDto)
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@permission_required('product.add_product', raise_exception=True)
 def product_create(request):
     if int(request.data['stock']) < 0:
         return Response({'error': 'Stock cannot be negative'}, status=400)
@@ -27,6 +30,8 @@ def product_create(request):
 
 @swagger_auto_schema(method='put', request_body=ProductUpdateDto)
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@permission_required('product.change_product', raise_exception=True)
 def product_update(request):
     product = Product.objects.filter(id=request.data['id']).first()
     if product is None:
@@ -42,6 +47,8 @@ def product_update(request):
     return Response(serialize.errors, status=400)
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+@permission_required('product.delete_product', raise_exception=True)
 def product_delete(request, id):
     product = Product.objects.filter(id=id).first()
     if product is None:
@@ -81,6 +88,7 @@ def product_get_all(request):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated, DjangoModelPermissions]
 
     def create(self, request, *args, **kwargs):
         if int(request.data['stock']) < 0:
