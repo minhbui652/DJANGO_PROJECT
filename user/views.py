@@ -1,3 +1,5 @@
+from asyncio import timeout
+
 from django.db.models import Q
 from django.shortcuts import render
 from rest_framework import viewsets
@@ -9,6 +11,8 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.decorators import action
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.core.cache import cache
+from django.core.cache import caches
 
 # Create your views here.
 class AuthViewSet(viewsets.ModelViewSet):
@@ -65,19 +69,28 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serialize.errors, status=400)
 
     def list(self, request, *args, **kwargs):
-        users = User.objects.all()
-        result = (
-            {
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'is_active': user.is_active,
-                'is_staff': user.is_staff,
-            }
-            for user in users
-        )
-        return Response(result, status=200)
+        cache_key = "list_user_info"
+        list_user = cache.get(cache_key)
+
+        if list_user:
+            print('get from cache done...')
+            return Response(list_user, status=200)
+        else:
+            print('Cache miss, fetching from database...')
+            users = User.objects.all()
+            result = [
+                {
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'is_active': user.is_active,
+                    'is_staff': user.is_staff,
+                }
+                for user in users
+            ]
+            cache.set(cache_key, list(result), timeout=300)
+            return Response(result, status=200)
 
     #trùng register()
     def create(self, request, *args, **kwargs):
@@ -97,4 +110,7 @@ class UserViewSet(viewsets.ModelViewSet):
         user.is_active = request.data['is_active']
         user.is_staff = request.data['is_staff']
         user.save()
+        cache_key = "list_user_info"
+        if cache_key in cache:
+            cache.delete(cache_key)
         return Response({'message': 'User updated successfully'}, status=200)

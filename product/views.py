@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from django.core.paginator import Paginator
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.core.cache import cache
 
 # Create your views here.
 @swagger_auto_schema(method='post', request_body=ProductCreateDto)
@@ -34,16 +35,21 @@ def product_create(request):
 @permission_required('product.change_product', raise_exception=True)
 def product_update(request):
     product = Product.objects.filter(id=request.data['id']).first()
+
     if product is None:
         return Response({'error': 'Product does not exist'}, status=400)
     if int(request.data['stock']) < 0:
         return Response({'error': 'Stock cannot be negative'}, status=400)
     if float(request.data['price']) <= 0:
         return Response({'error': 'Price cannot be negative'}, status=400)
+
     serialize = ProductUpdateDto(product, data=request.data, context=({'request': request}))
+    cache_keys = [f'product_{product.id}', 'product_list']
     if serialize.is_valid():
         serialize.save()
+        cache.delete_many(cache_keys)
         return Response(serialize.data, status=200)
+
     return Response(serialize.errors, status=400)
 
 @api_view(['DELETE'])
@@ -51,19 +57,27 @@ def product_update(request):
 @permission_required('product.delete_product', raise_exception=True)
 def product_delete(request, id):
     product = Product.objects.filter(id=id).first()
+    cache_keys = [f'product_{product.id}', 'product_list']
     if product is None:
         return Response({'error': 'Product does not exist'}, status=400)
     product.delete()
+    cache.delete_many(cache_keys)
     return Response({'message': 'Product deleted successfully'}, status=200)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def product_get_by_id(request, id):
-    product = Product.objects.filter(id=id).first()
+    product = cache.get(f'product_{id}')
     if product is None:
-        return Response({'error': 'Product does not exist'}, status=400)
-    serialize = ProductSerializer(product)
-    return Response(serialize.data, status=200)
+        product = Product.objects.filter(id=id).first()
+        if product is None:
+            return Response({'error': 'Product does not exist'}, status=400)
+        serialize = ProductSerializer(product)
+        cache.set(f'product_{id}', serialize.data, timeout=60*60)
+        return Response(serialize.data, status=200)
+    else:
+        serialize = ProductSerializer(product)
+        return Response(serialize.data, status=200)
 
 @swagger_auto_schema(method='get', manual_parameters=[
     openapi.Parameter('page_size', openapi.IN_QUERY, description="Page size", type=openapi.TYPE_INTEGER),
@@ -72,18 +86,33 @@ def product_get_by_id(request, id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def product_get_all(request):
-    products = Product.objects.all()
     page_size = int(request.GET.get('page_size', 10))
     page_number = int(request.GET.get('page_number', 1))
-    paginator = Paginator(products, page_size)
-    result = paginator.page(page_number) if paginator.num_pages >= page_number else []
-    serialize = ProductSerializer(result, many=True, context=({'request': request}))
-    response = {
-        'page': page_number,
-        'page_size': page_size,
-        'result': serialize.data,
-    }
-    return Response(response, status=200)
+    prods = cache.get('product_list')
+    if prods is None:
+        products = Product.objects.all()
+        paginator = Paginator(products, page_size)
+        result = paginator.page(page_number) if paginator.num_pages >= page_number else []
+        serialize = ProductSerializer(result, many=True, context=({'request': request}))
+        response = {
+            'page': page_number,
+            'page_size': page_size,
+            'result': serialize.data,
+        }
+        cache.set('product_list', list(products), timeout=60*60)
+        return Response(response, status=200)
+    else:
+        print('get from cache done...')
+        products = prods
+        paginator = Paginator(products, page_size)
+        result = paginator.page(page_number) if paginator.num_pages >= page_number else []
+        serialize = ProductSerializer(result, many=True, context=({'request': request}))
+        response = {
+            'page': page_number,
+            'page_size': page_size,
+            'result': serialize.data,
+        }
+        return Response(response, status=200)
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
