@@ -51,3 +51,20 @@ class UpdateGroupDto(serializers.ModelSerializer):
     id = serializers.IntegerField()
     name = serializers.CharField(max_length=150)
     permission_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True)
+
+class SendMailDto(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'subject', 'message']
+
+    email = serializers.ListField(child=serializers.EmailField(), write_only=True)
+    subject = serializers.CharField(max_length=255)
+    message = serializers.CharField(max_length=2000)
+
+class VerifyOtpDto(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['user_id', 'otp']
+
+    user_id = serializers.IntegerField()
+    otp = serializers.CharField(max_length=6, write_only=True)

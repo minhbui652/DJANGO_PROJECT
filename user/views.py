@@ -1,18 +1,20 @@
 from asyncio import timeout
-
 from django.db.models import Q
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from user.serializers import UserSerializer, LoginDto
+from DemoDjango.settings import EMAIL_HOST_USER
+from user.serializers import UserSerializer, LoginDto, SendMailDto, VerifyOtpDto
 from user.models import User
 from django.contrib.auth.hashers import make_password
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.core.cache import cache
 from django.core.cache import caches
+from django.core.mail import send_mail
+import pyotp
 
 # Create your views here.
 class AuthViewSet(viewsets.ModelViewSet):
@@ -114,3 +116,53 @@ class UserViewSet(viewsets.ModelViewSet):
         if cache_key in cache:
             cache.delete(cache_key)
         return Response({'message': 'User updated successfully'}, status=200)
+
+#email api test
+@swagger_auto_schema(method='post', request_body=SendMailDto, permission_classes=[AllowAny])
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def send_email(request):
+    try:
+        subject = request.data['subject']
+        message = request.data['message']
+        receives = request.data['email']
+        send_mail(subject,
+            message,
+            EMAIL_HOST_USER,
+            receives,
+            fail_silently=False
+        )
+        return Response({'message': 'Email sent successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def generate_otp(request, *args, **kwargs):
+    user = User.objects.get(id=kwargs['user_id'])
+    if user is None:
+        return Response({'error': 'User not found'}, status=404)
+    check_cache = caches['default'].get(f'otp_{kwargs['user_id']}')
+    if check_cache:
+        caches['default'].delete(f'otp_{kwargs['user_id']}')
+    totp = pyotp.TOTP(pyotp.random_base32(), digits=6)
+    otp = totp.now()
+    caches['default'].set(f'otp_{kwargs['user_id']}', otp, timeout=60)
+    return Response({'Sent otp success!'}, status=200)
+
+@swagger_auto_schema(method='post', request_body=VerifyOtpDto, permission_classes=[AllowAny])
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_otp(request):
+    user = User.objects.get(id=request.data['user_id'])
+    _cache = caches['default'].get(f'otp_{request.data['user_id']}')
+    if not _cache:
+        return Response({'error': 'OTP expired'}, status=400)
+    elif _cache != request.data['otp']:
+        return Response({'error': 'OTP is incorrect'}, status=400)
+    else:
+        caches['default'].delete(f'otp_{request.data['user_id']}')
+        user.is_active = True
+        user.save()
+        return Response({'message': 'OTP is correct'}, status=200)
