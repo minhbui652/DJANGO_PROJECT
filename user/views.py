@@ -149,6 +149,13 @@ def generate_otp(request, *args, **kwargs):
     totp = pyotp.TOTP(pyotp.random_base32(), digits=6)
     otp = totp.now()
     caches['default'].set(f'otp_{kwargs['user_id']}', otp, timeout=60)
+    send_mail(
+        "OTP Verification",
+        f'Mã xác thực otp của bạn là {otp}, \nMã có thời hạn là 60 giây. \nVui lòng không chia sẻ mã này với bất kỳ ai.',
+        EMAIL_HOST_USER,
+        [user.email],
+        fail_silently=False
+    )
     return Response({'Sent otp success!'}, status=200)
 
 @swagger_auto_schema(method='post', request_body=VerifyOtpDto, permission_classes=[AllowAny])

@@ -83,6 +83,6 @@ urlpatterns = [
     path('api/mail/send_mail/', send_email, name='send_email'),
 
     #api generate otp
-    path('api/otp/generate_otp/<int:user_id>/', generate_otp, name='generate_otp'),
+    path('api/otp/generate_otp/user_id=<int:user_id>', generate_otp, name='generate_otp'),
     path('api/otp/verify_otp/', verify_otp, name='verify_otp'),
 ]

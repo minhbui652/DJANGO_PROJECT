@@ -9,3 +9,5 @@
 #### - Sử dụng drf_yasg để tạo swagger cho api
 #### - Phân quyền người dùng theo user, group
 #### - Tạo api CRUD bằng api_view cho Group, Permission
+#### - Gửi mail với django.core.mail
+#### = Sử dụng redis để cache dữ liệu lấy từ db, lưu otp ngắn hạn
