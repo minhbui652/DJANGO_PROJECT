@@ -10,4 +10,10 @@
 #### - Phân quyền người dùng theo user, group
 #### - Tạo api CRUD bằng api_view cho Group, Permission
 #### - Gửi mail với django.core.mail
-#### = Sử dụng redis để cache dữ liệu lấy từ db, lưu otp ngắn hạn
+#### - Sử dụng redis để cache dữ liệu lấy từ db, lưu otp ngắn hạn
+#### - Sử dụng celery để gửi mail bất đồng bộ:
+        pip install celery
+        celery -A DemoDjango worker --loglevel=info --pool=solo
+#### - Sử dụng thư viện Flower để theo dõi các task queue: 
+        pip install flower
+        celery -A DemoDjango flower

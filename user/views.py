@@ -15,6 +15,8 @@ from django.core.cache import cache
 from django.core.cache import caches
 from django.core.mail import send_mail
 import pyotp
+from celery import shared_task
+from smtplib import SMTPException
 
 # Create your views here.
 class AuthViewSet(viewsets.ModelViewSet):
@@ -67,6 +69,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serialize = UserSerializer(data=data, context={'request': request})
         if serialize.is_valid():
             serialize.save()
+            generate_otp.delay(user_id=serialize.data['id'])
             return Response(serialize.data, status=201)
         return Response(serialize.errors, status=400)
 
@@ -136,27 +139,14 @@ def send_email(request):
     except Exception as e:
         return Response({'error': str(e)}, status=400)
 
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def generate_otp(request, *args, **kwargs):
-    user = User.objects.get(id=kwargs['user_id'])
-    if user is None:
-        return Response({'error': 'User not found'}, status=404)
-    check_cache = caches['default'].get(f'otp_{kwargs['user_id']}')
-    if check_cache:
-        caches['default'].delete(f'otp_{kwargs['user_id']}')
-    totp = pyotp.TOTP(pyotp.random_base32(), digits=6)
-    otp = totp.now()
-    caches['default'].set(f'otp_{kwargs['user_id']}', otp, timeout=60)
-    send_mail(
-        "OTP Verification",
-        f'Mã xác thực otp của bạn là {otp}, \nMã có thời hạn là 60 giây. \nVui lòng không chia sẻ mã này với bất kỳ ai.',
-        EMAIL_HOST_USER,
-        [user.email],
-        fail_silently=False
-    )
-    return Response({'Sent otp success!'}, status=200)
+def resend_otp(request, *args, **kwargs):
+    try:
+        generate_otp.delay(user_id=kwargs['user_id'])
+        return Response({'message': 'Resend OTP successfully'}, status=200)
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
 
 @swagger_auto_schema(method='post', request_body=VerifyOtpDto, permission_classes=[AllowAny])
 @api_view(['POST'])
@@ -172,4 +162,52 @@ def verify_otp(request):
         caches['default'].delete(f'otp_{request.data['user_id']}')
         user.is_active = True
         user.save()
+        welcome_email.delay(user_id=request.data['user_id'])
         return Response({'message': 'OTP is correct'}, status=200)
+
+@shared_task
+def generate_otp(user_id: int):
+    try:
+        user = User.objects.get(id=user_id)
+        if not user:
+            return {'error': 'User not found'}
+
+        cache_key = f'otp_{user_id}'
+        if caches['default'].get(cache_key):
+            caches['default'].delete(cache_key)
+
+        totp = pyotp.TOTP(pyotp.random_base32(), digits=6)
+        otp = totp.now()
+        caches['default'].set(cache_key, otp, timeout=60)
+
+        try:
+            send_mail(
+                "OTP Verification",
+                f"Mã xác thực OTP của bạn là {otp},\nMã có thời hạn 60 giây.\nVui lòng không chia sẻ mã này với bất kỳ ai.",
+                EMAIL_HOST_USER,
+                [user.email],
+                fail_silently=False
+            )
+            print(f'OTP: {otp}')
+            return {'status': 'OTP sent'}
+        except SMTPException as e:
+            print(f"SMTP error occurred: {str(e)}")
+            return {'error': 'Failed to send OTP, invalid email address or SMTP issue'}
+
+    except Exception as e:
+        print(f'Error: {str(e)}')
+        return {'error': str(e)}
+
+@shared_task
+def welcome_email(user_id:int):
+    user = User.objects.get(id=user_id)
+    if user is None:
+        return Response({'error': 'User not found'}, status=404)
+    send_mail(
+        "Đăng ký tài khoản thành công",
+        f'Chúc mừng {user.username} đã đăng ký thành công tài khoản trên hệ thống của chúng tôi. \nHy vọng bạn sẽ có thời gian vui vẻ khi trải nghiệm hệ thống!',
+        EMAIL_HOST_USER,
+        [user.email],
+        fail_silently=False
+    )
+    return Response({'Sent welcome email success!'}, status=200)
