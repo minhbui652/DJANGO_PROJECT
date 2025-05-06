@@ -17,3 +17,10 @@
 #### - Sử dụng thư viện Flower để theo dõi các task queue: 
         pip install flower
         celery -A DemoDjango flower
+#### - Sử dụng Redis pub/sub cho luồng đăng ký người dùng, log được ghi vào file logs/user_signup.log
+        - Gọi api register thành công, publish message 'register'
+          subscribe nhận message và thực thi task generate_otp.
+        - Gọi api verify_otp thành công, publish message 'verify_otp_success'
+          subscribe nhận message và thực thi task activate_account, welcome_email.
+        - Gọi api resend_otp thành công, publish message 'resend_otp'
+          subscribe nhận message và thực thi task generate_otp.

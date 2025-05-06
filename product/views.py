@@ -114,38 +114,6 @@ def product_get_all(request):
         }
         return Response(response, status=200)
 
-class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated, DjangoModelPermissions]
-
-    def create(self, request, *args, **kwargs):
-        if int(request.data['stock']) < 0:
-            return Response({'error': 'Stock cannot be negative'}, status=400)
-        if float(request.data['price']) <= 0:
-            return Response({'error': 'Price cannot be negative'}, status=400)
-        serialize = ProductSerializer(data=request.data, context={'request': request})
-        if serialize.is_valid():
-            serialize.save()
-            return Response(serialize.data, status=201)
-        return Response(serialize.errors, status=400)
-
-    def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
-        if int(request.data['stock']) < 0:
-            return Response({'error': 'Stock cannot be negative'}, status=400)
-        if float(request.data['price']) <= 0:
-            return Response({'error': 'Price cannot be negative'}, status=400)
-
-        product = Product.objects.filter(id=kwargs.get('pk')).first()
-        if product is None:
-            return Response({'error': 'Product does not exist'}, status=400)
-        serialize = ProductSerializer(product, data=request.data, partial=partial)
-        if serialize.is_valid():
-            serialize.save()
-            return Response(serialize.data, status=200)
-        return Response(serialize.errors, status=400)
-
 class CartViewSet(viewsets.ModelViewSet):
     queryset = Cart.objects.all()
     serializer_class = CartSerializer

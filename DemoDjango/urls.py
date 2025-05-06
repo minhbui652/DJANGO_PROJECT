@@ -19,7 +19,7 @@ from django.urls import path, include, re_path
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from user.views import UserViewSet, AuthViewSet, send_email, resend_otp, verify_otp
-from product.views import ProductViewSet, CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
+from product.views import CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
 from user.view_permissions import (view_permissions, view_permissions_by_id, add_permission, delete_permission,
                                    view_group, view_group_by_user_id, add_group, update_group, delete_group)
 from rest_framework import routers, permissions
@@ -40,7 +40,6 @@ schema_view = get_schema_view(
 
 router = routers.DefaultRouter()
 router.register('user', UserViewSet, basename='user')
-router.register('product', ProductViewSet, basename='product')
 router.register('cart', CartViewSet, basename='cart')
 router.register('auth', AuthViewSet, basename='auth')
 

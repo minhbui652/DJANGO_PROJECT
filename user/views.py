@@ -17,6 +17,10 @@ from django.core.mail import send_mail
 import pyotp
 from celery import shared_task
 from smtplib import SMTPException
+import logging
+from DemoDjango.redis_client import redis_client
+
+logger = logging.getLogger('signup')
 
 # Create your views here.
 class AuthViewSet(viewsets.ModelViewSet):
@@ -69,7 +73,8 @@ class UserViewSet(viewsets.ModelViewSet):
         serialize = UserSerializer(data=data, context={'request': request})
         if serialize.is_valid():
             serialize.save()
-            generate_otp.delay(user_id=serialize.data['id'])
+            redis_client.publish('register', serialize.data['id'])
+            logger.info(f'create user {serialize.data["username"]} with  id={serialize.data['id']} success')
             return Response(serialize.data, status=201)
         return Response(serialize.errors, status=400)
 
@@ -143,7 +148,8 @@ def send_email(request):
 @permission_classes([AllowAny])
 def resend_otp(request, *args, **kwargs):
     try:
-        generate_otp.delay(user_id=kwargs['user_id'])
+        redis_client.publish('resend_otp', kwargs['user_id'])
+        logger.info(f'resend otp to user {kwargs["user_id"]} success')
         return Response({'message': 'Resend OTP successfully'}, status=200)
     except Exception as e:
         return Response({'error': str(e)}, status=400)
@@ -160,9 +166,7 @@ def verify_otp(request):
         return Response({'error': 'OTP is incorrect'}, status=400)
     else:
         caches['default'].delete(f'otp_{request.data['user_id']}')
-        user.is_active = True
-        user.save()
-        welcome_email.delay(user_id=request.data['user_id'])
+        redis_client.publish('verify_otp_success', request.data['user_id'])
         return Response({'message': 'OTP is correct'}, status=200)
 
 @shared_task
@@ -179,7 +183,7 @@ def generate_otp(user_id: int):
         totp = pyotp.TOTP(pyotp.random_base32(), digits=6)
         otp = totp.now()
         caches['default'].set(cache_key, otp, timeout=60)
-
+        logger.info(f'generate otp for user {user.username} with id={user_id} success')
         try:
             send_mail(
                 "OTP Verification",
@@ -188,26 +192,41 @@ def generate_otp(user_id: int):
                 [user.email],
                 fail_silently=False
             )
-            print(f'OTP: {otp}')
+            logger.info(f'send otp to user {user.username} with id={user_id} success')
             return {'status': 'OTP sent'}
         except SMTPException as e:
-            print(f"SMTP error occurred: {str(e)}")
+            logger.error(f'Failed to send OTP: {str(e)}')
             return {'error': 'Failed to send OTP, invalid email address or SMTP issue'}
 
     except Exception as e:
-        print(f'Error: {str(e)}')
+        logger.error(f'Error generating OTP: {str(e)}')
         return {'error': str(e)}
 
 @shared_task
 def welcome_email(user_id:int):
-    user = User.objects.get(id=user_id)
-    if user is None:
-        return Response({'error': 'User not found'}, status=404)
-    send_mail(
-        "Đăng ký tài khoản thành công",
-        f'Chúc mừng {user.username} đã đăng ký thành công tài khoản trên hệ thống của chúng tôi. \nHy vọng bạn sẽ có thời gian vui vẻ khi trải nghiệm hệ thống!',
-        EMAIL_HOST_USER,
-        [user.email],
-        fail_silently=False
-    )
-    return Response({'Sent welcome email success!'}, status=200)
+    try:
+        user = User.objects.get(id=user_id)
+        send_mail(
+            "Đăng ký tài khoản thành công",
+            f'Chúc mừng {user.username} đã đăng ký thành công tài khoản trên hệ thống của chúng tôi. \nHy vọng bạn sẽ có thời gian vui vẻ khi trải nghiệm hệ thống!',
+            EMAIL_HOST_USER,
+            [user.email],
+            fail_silently=False
+        )
+        logger.info(f'send welcome email to user {user.username} with id={user_id} success')
+        return Response({'Sent welcome email success!'}, status=200)
+    except Exception as e:
+        logger.error(f'Error sending welcome email: {str(e)}')
+        return Response({'error': str(e)}, status=400)
+
+@shared_task
+def activate_account(user_id:int):
+    try:
+        user = User.objects.get(id=user_id)
+        user.is_active = True
+        user.save()
+        logger.info(f'activate account for user {user.username} with id={user_id} success')
+        return Response({'Activate account success!'}, status=200)
+    except Exception as e:
+        logger.error(f'Error activating account: {str(e)}')
+        return Response({'error': str(e)}, status=400)
