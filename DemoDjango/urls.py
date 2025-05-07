@@ -1,27 +1,11 @@
-"""
-URL configuration for DemoDjango project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
 from django.urls import path, include, re_path
-from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
 from user.views import UserViewSet, AuthViewSet, send_email, resend_otp, verify_otp
 from product.views import CartViewSet, get_total_price, product_create, product_update, product_delete, product_get_all, product_get_by_id
 from user.view_permissions import (view_permissions, view_permissions_by_id, add_permission, delete_permission,
                                    view_group, view_group_by_user_id, add_group, update_group, delete_group)
+from file_upload.views import upload_file, download_file, get_file_path
 from rest_framework import routers, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_yasg import openapi
@@ -84,4 +68,9 @@ urlpatterns = [
     #api generate otp
     path('api/otp/resend_otp/user_id=<int:user_id>', resend_otp, name='resend_otp'),
     path('api/otp/verify_otp/', verify_otp, name='verify_otp'),
+
+    #api file upload
+    path('api/file/upload_file/', upload_file, name='upload_file'),
+    path('api/file/download_file/<int:file_id>/', download_file, name='download_file'),
+    path('api/file/get_file_path/<int:file_id>/', get_file_path, name='get_file_path'),
 ]
