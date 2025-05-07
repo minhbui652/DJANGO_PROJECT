@@ -23,7 +23,7 @@ from DemoDjango.redis_client import redis_client
 logger = logging.getLogger('signup')
 
 # Create your views here.
-class AuthViewSet(viewsets.ModelViewSet):
+class AuthViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(method='post', request_body=LoginDto, permission_classes=[AllowAny])
@@ -214,10 +214,10 @@ def welcome_email(user_id:int):
             fail_silently=False
         )
         logger.info(f'send welcome email to user {user.username} with id={user_id} success')
-        return Response({'Sent welcome email success!'}, status=200)
+        return {'success' : f'Sent welcome email success!'}
     except Exception as e:
         logger.error(f'Error sending welcome email: {str(e)}')
-        return Response({'error': str(e)}, status=400)
+        return {'error': str(e)}
 
 @shared_task
 def activate_account(user_id:int):
@@ -226,7 +226,7 @@ def activate_account(user_id:int):
         user.is_active = True
         user.save()
         logger.info(f'activate account for user {user.username} with id={user_id} success')
-        return Response({'Activate account success!'}, status=200)
+        return {'success' : 'Activate account success!'}
     except Exception as e:
         logger.error(f'Error activating account: {str(e)}')
-        return Response({'error': str(e)}, status=400)
+        return {'error': str(e)}

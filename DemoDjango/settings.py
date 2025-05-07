@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'middleware.logging_middleware.LoggingMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -217,16 +218,28 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
+        'signup_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOG_DIR, 'user_signup.log'),
             'formatter': 'verbose',
         },
+        'request_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'request.log'),
+            'formatter': 'verbose',
+        }
+
     },
     'loggers': {
         'signup': {
-            'handlers': ['file'],
+            'handlers': ['signup_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'request': {
+            'handlers': ['request_file'],
             'level': 'DEBUG',
             'propagate': False,
         },
